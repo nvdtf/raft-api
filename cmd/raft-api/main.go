@@ -1,50 +1,42 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
+	"io/ioutil"
+	"log"
+	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/nvdtf/raft-api/pkg/gitkit"
-	"github.com/onflow/flow-cli/pkg/flowkit"
-	"github.com/onflow/flow-cli/pkg/flowkit/contracts"
 )
 
+type ProcessRepoParams struct {
+	Owner   string `json:"owner"`
+	Repo    string `json:"repo"`
+	Network string `json:"network"`
+}
+
+func ProcessRepoHandler(w http.ResponseWriter, r *http.Request) {
+	paramsBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	params := &ProcessRepoParams{}
+	json.Unmarshal(paramsBody, params)
+
+	gk := gitkit.NewGitKit(params.Owner, params.Repo)
+
+	result, err := gk.Process(params.Network)
+	if err != nil {
+		panic(err)
+	}
+
+	json.NewEncoder(w).Encode(result)
+}
+
 func main() {
-	network := "mainnet"
-	readerWriter := gitkit.NewGitReaderWriter("onflow", "flow-ft")
-	configPath := []string{"flow.json"}
-	codeFilename := "transactions/transfer_tokens.cdc"
-
-	state, err := flowkit.Load(configPath, readerWriter)
-	if err != nil {
-		panic(err)
-	}
-
-	code, err := readerWriter.ReadFile(codeFilename)
-	if err != nil {
-		panic(err)
-	}
-
-	resolver, err := contracts.NewResolver(code)
-	if err != nil {
-		panic(err)
-	}
-
-	if resolver.HasFileImports() {
-		contractsNetwork, err := state.DeploymentContractsByNetwork(network)
-		if err != nil {
-			panic(err)
-		}
-
-		code, err = resolver.ResolveImports(
-			codeFilename,
-			contractsNetwork,
-			state.AliasesForNetwork(network),
-		)
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Println(code)
-	}
-
+	router := mux.NewRouter().StrictSlash(true)
+	router.HandleFunc("/processRepo", ProcessRepoHandler)
+	log.Fatal(http.ListenAndServe(":8080", router))
 }

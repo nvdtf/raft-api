@@ -1,0 +1,2 @@
+curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"nvdtf", "repo":"flow-contract-auditor-sample", "network": "mainnet"}'
+curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"onflow", "repo":"flow-ft", "network": "testnet"}'
