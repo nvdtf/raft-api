@@ -1,2 +1,5 @@
+include .env
+
+.SILENT: run
 run:
-	go run cmd/raft-api/main.go
+	GITHUB_TOKEN=${GITHUB_TOKEN} go run cmd/raft-api/*.go
