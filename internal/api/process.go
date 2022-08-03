@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 )
@@ -23,6 +24,7 @@ func (api *Api) ProcessRepoHandler(w http.ResponseWriter, r *http.Request) {
 
 	result, err := api.kit.Process(params.Owner, params.Repo, params.Network)
 	if err != nil {
+		fmt.Printf("Error in ProcessRepo(%s, %s, %s) -> %s\n", params.Owner, params.Repo, params.Network, err)
 		panic(err)
 	}
 

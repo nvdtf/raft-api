@@ -37,6 +37,8 @@ type Argument struct {
 func (gk *GitKit) Process(owner string, repo string, network string) (*ProcessResult, error) {
 	ctx := context.Background()
 
+	fmt.Printf("Processing %s/%s (%s)\n", owner, repo, network)
+
 	contracts, scripts, transactions, err := gk.processCadenceFiles(ctx, owner, repo, network)
 	if err != nil {
 		return nil, err
