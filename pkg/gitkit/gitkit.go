@@ -66,7 +66,7 @@ func (gk *GitKit) GetContractDeployments(owner string, repo string, network stri
 	result := make(map[string]string)
 	for name, j := range contracts.Contracts {
 		for n, a := range j.Advanced.Aliases {
-			if strings.Trim(n, " ") == network {
+			if strings.EqualFold(strings.Trim(n, " "), network) {
 				result[name] = strings.TrimPrefix(a, "0x")
 			}
 		}
