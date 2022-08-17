@@ -19,10 +19,11 @@ type ProcessResult struct {
 }
 
 type File struct {
-	Type     string `json:"type"`
-	Path     string `json:"path"`
-	Filename string `json:"filename"`
-	Contents string `json:"contents"`
+	Type     string   `json:"type"`
+	Path     string   `json:"path"`
+	Filename string   `json:"filename"`
+	Contents string   `json:"contents"`
+	Errors   []string `json:"errors"`
 }
 
 type DeployedFile struct {
@@ -110,6 +111,7 @@ func (gk *GitKit) processCadenceFiles(
 		file := File{
 			Path:     *res.Path,
 			Filename: *res.Name,
+			Errors:   []string{},
 		}
 
 		isContract, contractName := IsContract(string(contents))
@@ -140,7 +142,9 @@ func (gk *GitKit) processCadenceFiles(
 
 		} else if IsTransaction(string(contents)) || IsScript(string(contents)) {
 
-			processResult := ReplaceImports(contents, contractsMap)
+			processResult, errors := ReplaceImports(contents, contractsMap)
+			file.Errors = append(file.Errors, errors...)
+
 			file.Contents = string(processResult)
 
 			var args []Argument
@@ -196,6 +200,7 @@ func (gk *GitKit) processDocumentFiles(
 			Path:     *res.Path,
 			Filename: *res.Name,
 			Contents: string(contents),
+			Errors:   []string{},
 		})
 	}
 
@@ -223,24 +228,34 @@ func IsScript(code string) bool {
 	return len(matches) > 0
 }
 
-func ReplaceImports(code []byte, contractRef map[string]string) []byte {
+func ReplaceImports(code []byte, contractRef map[string]string) ([]byte, []string) {
 	r, _ := regexp.Compile(`import (?P<Contract>\w*) from "(.*).cdc"`)
 	matches := r.FindAllStringSubmatch(string(code), -1)
 
 	result := string(code)
 
+	errors := []string{}
+
 	for i := range matches {
-		result = strings.ReplaceAll(
-			result,
-			matches[i][0],
-			fmt.Sprintf("import %s from 0x%s",
-				matches[i][1],
-				contractRef[matches[i][1]],
-			),
-		)
+		contractName := matches[i][1]
+		address, exists := contractRef[contractName]
+
+		if exists {
+			result = strings.ReplaceAll(
+				result,
+				matches[i][0],
+				fmt.Sprintf("import %s from 0x%s",
+					contractName,
+					address,
+				),
+			)
+		} else {
+			errors = append(errors, fmt.Sprintf("Cannot resolve import for %s", contractName))
+		}
+
 	}
 
-	return []byte(result)
+	return []byte(result), errors
 
 }
 

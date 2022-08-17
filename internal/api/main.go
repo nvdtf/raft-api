@@ -12,3 +12,7 @@ func NewApi(githubToken string) Api {
 		kit: gk,
 	}
 }
+
+type JSONError struct {
+	Error string `json:"error"`
+}

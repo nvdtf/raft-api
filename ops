@@ -1,3 +1,6 @@
 curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"nvdtf", "repo":"flow-contract-auditor-sample", "network": "mainnet"}'
 curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"onflow", "repo":"flow-ft", "network": "testnet"}'
 curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"nvdtf", "repo":"raft-sample", "network": "mainnet"}'
+
+// repo not found
+curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"nvdtf", "repo":"not-found", "network": "mainnet"}'
