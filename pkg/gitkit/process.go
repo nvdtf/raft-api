@@ -7,13 +7,15 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go-sdk/access/http"
 )
 
 type ProcessResult struct {
-	Documents    []File          `json:"documents"`
-	Contracts    []File          `json:"contracts"`
-	Scripts      []ProcessedFile `json:"scripts"`
-	Transactions []ProcessedFile `json:"transactions"`
+	Documents    []File           `json:"documents"`
+	Contracts    []DeployedFile   `json:"contracts"`
+	Scripts      []ExecutableFile `json:"scripts"`
+	Transactions []ExecutableFile `json:"transactions"`
 }
 
 type File struct {
@@ -23,7 +25,14 @@ type File struct {
 	Contents string `json:"contents"`
 }
 
-type ProcessedFile struct {
+type DeployedFile struct {
+	File
+
+	Address string `json:"address"`
+	Network string `json:"network"`
+}
+
+type ExecutableFile struct {
 	File
 
 	Arguments []Argument `json:"arguments"`
@@ -63,9 +72,9 @@ func (gk *GitKit) processCadenceFiles(
 	repo string,
 	network string,
 ) (
-	contracts []File,
-	scripts []ProcessedFile,
-	transactions []ProcessedFile,
+	contracts []DeployedFile,
+	scripts []ExecutableFile,
+	transactions []ExecutableFile,
 	err error,
 ) {
 	query := fmt.Sprintf("filename:.cdc+repo:%s/%s", owner, repo)
@@ -80,6 +89,17 @@ func (gk *GitKit) processCadenceFiles(
 		return
 	}
 
+	var networkHost string
+	if strings.EqualFold("testnet", network) {
+		networkHost = http.TestnetHost
+	} else if strings.EqualFold("mainnet", network) {
+		networkHost = http.MainnetHost
+	}
+	flowClient, err := http.NewClient(networkHost)
+	if err != nil {
+		return
+	}
+
 	for _, res := range results.CodeResults {
 		contents, errRead := gk.Read(owner, repo, *res.Path)
 		if errRead != nil {
@@ -87,45 +107,62 @@ func (gk *GitKit) processCadenceFiles(
 			return
 		}
 
-		processResult := ReplaceImports(contents, contractsMap)
-
 		file := File{
 			Path:     *res.Path,
 			Filename: *res.Name,
-			Contents: string(processResult),
 		}
 
-		if IsContract(string(contents)) {
+		isContract, contractName := IsContract(string(contents))
+		if isContract {
+			address := contractsMap[contractName]
+
 			file.Type = "Contract"
-			contracts = append(contracts, file)
-		} else if IsTransaction(string(contents)) {
-			file.Type = "Transaction"
 
-			args, errParse := ParseTransactionArguments(string(contents))
-			if errParse != nil {
-				err = errParse
-				return
+			if len(address) > 0 {
+				account, errFlow := flowClient.GetAccount(ctx, flow.HexToAddress(address))
+				if errFlow != nil {
+					err = errFlow
+					return
+				}
+				file.Contents = string(account.Contracts[contractName])
+
+			} else {
+				file.Contents = string(contents)
 			}
 
-			processedFile := ProcessedFile{
-				File:      file,
-				Arguments: args,
-			}
-			transactions = append(transactions, processedFile)
-		} else if IsScript(string(contents)) {
-			file.Type = "Script"
-
-			args, errParse := ParseScriptArguments(string(contents))
-			if errParse != nil {
-				err = errParse
-				return
+			contractFile := DeployedFile{
+				File:    file,
+				Network: network,
+				Address: address,
 			}
 
-			processedFile := ProcessedFile{
-				File:      file,
-				Arguments: args,
+			contracts = append(contracts, contractFile)
+
+		} else if IsTransaction(string(contents)) || IsScript(string(contents)) {
+
+			processResult := ReplaceImports(contents, contractsMap)
+			file.Contents = string(processResult)
+
+			var args []Argument
+			if IsTransaction(string(contents)) {
+				file.Type = "Transaction"
+
+				args, err = ParseTransactionArguments(string(contents))
+
+				transactions = append(transactions, ExecutableFile{
+					File:      file,
+					Arguments: args,
+				})
+			} else {
+				file.Type = "Script"
+
+				args, err = ParseScriptArguments(string(contents))
+
+				scripts = append(scripts, ExecutableFile{
+					File:      file,
+					Arguments: args,
+				})
 			}
-			scripts = append(scripts, processedFile)
 		}
 	}
 
@@ -165,21 +202,24 @@ func (gk *GitKit) processDocumentFiles(
 	return
 }
 
-func IsContract(code string) bool {
+func IsContract(code string) (bool, string) {
 	r, _ := regexp.Compile(`pub contract (.*){`)
-	matches := r.FindAllStringSubmatch(string(code), -1)
-	return len(matches) > 0
+	contractName := r.FindStringSubmatch(code)
+	if len(contractName) > 0 {
+		return true, strings.Trim(contractName[1], " ")
+	}
+	return false, ""
 }
 
 func IsTransaction(code string) bool {
 	r, _ := regexp.Compile(`transaction(.*){`)
-	matches := r.FindAllStringSubmatch(string(code), -1)
+	matches := r.FindAllStringSubmatch(code, -1)
 	return len(matches) > 0
 }
 
 func IsScript(code string) bool {
 	r, _ := regexp.Compile(`pub fun main(.*){`)
-	matches := r.FindAllStringSubmatch(string(code), -1)
+	matches := r.FindAllStringSubmatch(code, -1)
 	return len(matches) > 0
 }
 
@@ -215,6 +255,8 @@ func ParseTransactionArguments(
 		return
 	}
 
+	args = []Argument{}
+
 	if program.SoleTransactionDeclaration() != nil {
 		if program.SoleTransactionDeclaration().ParameterList != nil {
 			for _, param := range program.SoleTransactionDeclaration().ParameterList.Parameters {
@@ -239,6 +281,8 @@ func ParseScriptArguments(
 	if err != nil {
 		return
 	}
+
+	args = []Argument{}
 
 	if program.FunctionDeclarations() != nil && len(program.FunctionDeclarations()) == 1 {
 		if program.FunctionDeclarations()[0].ParameterList != nil {
