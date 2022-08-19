@@ -1,6 +1,11 @@
 curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"nvdtf", "repo":"flow-contract-auditor-sample", "network": "mainnet"}'
-curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"onflow", "repo":"flow-ft", "network": "testnet"}'
-curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"nvdtf", "repo":"raft-sample", "network": "mainnet"}'
+curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"onflow", "repo":"kitty-items", "network": "mainnet"}'
 
 // repo not found
 curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"nvdtf", "repo":"not-found", "network": "mainnet"}'
+
+// pagination support (TODO) 30 -> 167
+curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"portto", "repo":"bloctobay-contracts", "network": "mainnet"}'
+
+// README parsing
+curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"crash13override", "repo":"flovatar", "network": "mainnet"}'

@@ -1,6 +1,9 @@
 package gitkit
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"strings"
+)
 
 const FLOW_JSON_PATH = "./flow.json"
 
@@ -48,6 +51,36 @@ func parseJson(flowJson []byte) (*flowJsonConfig, error) {
 	err := json.Unmarshal(flowJson, result)
 	if err != nil {
 		return nil, err
+	}
+
+	return result, nil
+}
+
+func (gk *GitKit) parseFlowJsonFile(
+	owner string,
+	repo string,
+	network string,
+) (
+	map[string]string,
+	error,
+) {
+	flowJson, err := gk.Read(owner, repo, FLOW_JSON_PATH)
+	if err != nil {
+		return nil, err
+	}
+
+	contracts, err := parseJson(flowJson)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]string)
+	for name, j := range contracts.Contracts {
+		for n, a := range j.Advanced.Aliases {
+			if strings.EqualFold(strings.Trim(n, " "), network) {
+				result[name] = strings.TrimPrefix(a, "0x")
+			}
+		}
 	}
 
 	return result, nil

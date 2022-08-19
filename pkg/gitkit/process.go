@@ -44,17 +44,28 @@ type Argument struct {
 	ArgType string `json:"type"`
 }
 
-func (gk *GitKit) Process(owner string, repo string, network string) (*ProcessResult, error) {
+func (gk *GitKit) Process(
+	owner string,
+	repo string,
+	network string,
+) (
+	*ProcessResult,
+	error,
+) {
 	ctx := context.Background()
 
 	fmt.Printf("Processing %s/%s (%s)\n", owner, repo, network)
 
-	contracts, scripts, transactions, err := gk.processCadenceFiles(ctx, owner, repo, network)
+	documents, err := gk.processDocumentFiles(ctx, owner, repo)
 	if err != nil {
 		return nil, err
 	}
 
-	documents, err := gk.processDocumentFiles(ctx, owner, repo)
+	contractsMap := gk.getContractsMap(owner, repo, network, documents)
+
+	fmt.Println(contractsMap)
+
+	contracts, scripts, transactions, err := gk.processCadenceFiles(ctx, owner, repo, network, contractsMap)
 	if err != nil {
 		return nil, err
 	}
@@ -67,11 +78,40 @@ func (gk *GitKit) Process(owner string, repo string, network string) (*ProcessRe
 	}, nil
 }
 
+func (gk *GitKit) getContractsMap(
+	owner string,
+	repo string,
+	network string,
+	documents []File,
+) (
+	contractsMap map[string]string,
+) {
+	contractsMap, err := gk.parseFlowJsonFile(owner, repo, network)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var docContractMap map[string]string
+	for _, f := range documents {
+		if strings.EqualFold(f.Filename, "README.md") {
+			docContractMap, err = gk.parseFileForContracts(network, f)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
+
+	fmt.Println(docContractMap)
+
+	return
+}
+
 func (gk *GitKit) processCadenceFiles(
 	ctx context.Context,
 	owner string,
 	repo string,
 	network string,
+	contractsMap map[string]string,
 ) (
 	contracts []DeployedFile,
 	scripts []ExecutableFile,
@@ -80,11 +120,11 @@ func (gk *GitKit) processCadenceFiles(
 ) {
 	query := fmt.Sprintf("filename:.cdc+repo:%s/%s", owner, repo)
 
-	contractsMap, err := gk.GetContractDeployments(owner, repo, network)
-	if err != nil {
-		return
-	}
+	contracts = []DeployedFile{}
+	scripts = []ExecutableFile{}
+	transactions = []ExecutableFile{}
 
+	// TODO: pass page number here + support pagination
 	results, _, err := gk.client.Search.Code(ctx, query, nil)
 	if err != nil {
 		return
@@ -147,11 +187,15 @@ func (gk *GitKit) processCadenceFiles(
 
 			file.Contents = string(processResult)
 
+			var errParse error
 			var args []Argument
 			if IsTransaction(string(contents)) {
 				file.Type = "Transaction"
 
-				args, err = ParseTransactionArguments(string(contents))
+				args, errParse = ParseTransactionArguments(string(contents))
+				if errParse != nil {
+					file.Errors = append(file.Errors, errParse.Error())
+				}
 
 				transactions = append(transactions, ExecutableFile{
 					File:      file,
@@ -160,7 +204,10 @@ func (gk *GitKit) processCadenceFiles(
 			} else {
 				file.Type = "Script"
 
-				args, err = ParseScriptArguments(string(contents))
+				args, errParse = ParseScriptArguments(string(contents))
+				if errParse != nil {
+					file.Errors = append(file.Errors, errParse.Error())
+				}
 
 				scripts = append(scripts, ExecutableFile{
 					File:      file,
@@ -228,7 +275,13 @@ func IsScript(code string) bool {
 	return len(matches) > 0
 }
 
-func ReplaceImports(code []byte, contractRef map[string]string) ([]byte, []string) {
+func ReplaceImports(
+	code []byte,
+	contractRef map[string]string,
+) (
+	[]byte,
+	[]string,
+) {
 	r, _ := regexp.Compile(`import (?P<Contract>\w*) from "(.*).cdc"`)
 	matches := r.FindAllStringSubmatch(string(code), -1)
 
@@ -265,12 +318,12 @@ func ParseTransactionArguments(
 	args []Argument,
 	err error,
 ) {
+	args = []Argument{}
+
 	program, err := parser2.ParseProgram(code, nil)
 	if err != nil {
 		return
 	}
-
-	args = []Argument{}
 
 	if program.SoleTransactionDeclaration() != nil {
 		if program.SoleTransactionDeclaration().ParameterList != nil {
@@ -292,12 +345,12 @@ func ParseScriptArguments(
 	args []Argument,
 	err error,
 ) {
+	args = []Argument{}
+
 	program, err := parser2.ParseProgram(code, nil)
 	if err != nil {
 		return
 	}
-
-	args = []Argument{}
 
 	if program.FunctionDeclarations() != nil && len(program.FunctionDeclarations()) == 1 {
 		if program.FunctionDeclarations()[0].ParameterList != nil {
@@ -310,5 +363,19 @@ func ParseScriptArguments(
 		}
 	}
 
+	return
+}
+
+func (gk *GitKit) parseFileForContracts(
+	network string,
+	file File,
+) (
+	contractsMap map[string]string,
+	err error,
+) {
+	r, _ := regexp.Compile(`0x[0-9a-fA-F]{16}`)
+	docAddresses := r.FindAllString(file.Contents, -1)
+
+	viableAddresses
 	return
 }
