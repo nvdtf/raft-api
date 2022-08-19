@@ -61,27 +61,28 @@ func (gk *GitKit) parseFlowJsonFile(
 	repo string,
 	network string,
 ) (
-	map[string]string,
-	error,
+	contractMap map[string]string,
+	err error,
 ) {
+	contractMap = make(map[string]string)
+
 	flowJson, err := gk.Read(owner, repo, FLOW_JSON_PATH)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	contracts, err := parseJson(flowJson)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	result := make(map[string]string)
 	for name, j := range contracts.Contracts {
 		for n, a := range j.Advanced.Aliases {
 			if strings.EqualFold(strings.Trim(n, " "), network) {
-				result[name] = strings.TrimPrefix(a, "0x")
+				contractMap[name] = strings.TrimPrefix(a, "0x")
 			}
 		}
 	}
 
-	return result, nil
+	return
 }

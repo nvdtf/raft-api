@@ -56,16 +56,25 @@ func (gk *GitKit) Process(
 
 	fmt.Printf("Processing %s/%s (%s)\n", owner, repo, network)
 
+	var networkHost string
+	if strings.EqualFold("testnet", network) {
+		networkHost = http.TestnetHost
+	} else if strings.EqualFold("mainnet", network) {
+		networkHost = http.MainnetHost
+	}
+	flowClient, err := http.NewClient(networkHost)
+	if err != nil {
+		return nil, err
+	}
+
 	documents, err := gk.processDocumentFiles(ctx, owner, repo)
 	if err != nil {
 		return nil, err
 	}
 
-	contractsMap := gk.getContractsMap(owner, repo, network, documents)
+	contractsMap := gk.getContractsMap(ctx, owner, repo, network, flowClient, documents)
 
-	fmt.Println(contractsMap)
-
-	contracts, scripts, transactions, err := gk.processCadenceFiles(ctx, owner, repo, network, contractsMap)
+	contracts, scripts, transactions, err := gk.processCadenceFiles(ctx, owner, repo, network, contractsMap, flowClient)
 	if err != nil {
 		return nil, err
 	}
@@ -79,9 +88,11 @@ func (gk *GitKit) Process(
 }
 
 func (gk *GitKit) getContractsMap(
+	ctx context.Context,
 	owner string,
 	repo string,
 	network string,
+	flowClient *http.Client,
 	documents []File,
 ) (
 	contractsMap map[string]string,
@@ -93,15 +104,20 @@ func (gk *GitKit) getContractsMap(
 
 	var docContractMap map[string]string
 	for _, f := range documents {
-		if strings.EqualFold(f.Filename, "README.md") {
-			docContractMap, err = gk.parseFileForContracts(network, f)
+		if strings.EqualFold(f.Path, "README.md") {
+			docContractMap, err = gk.parseFileForContracts(ctx, network, flowClient, f)
 			if err != nil {
 				fmt.Println(err)
 			}
 		}
 	}
 
-	fmt.Println(docContractMap)
+	for k, v := range docContractMap {
+		_, exists := contractsMap[k]
+		if !exists {
+			contractsMap[k] = v
+		}
+	}
 
 	return
 }
@@ -112,6 +128,7 @@ func (gk *GitKit) processCadenceFiles(
 	repo string,
 	network string,
 	contractsMap map[string]string,
+	flowClient *http.Client,
 ) (
 	contracts []DeployedFile,
 	scripts []ExecutableFile,
@@ -126,17 +143,6 @@ func (gk *GitKit) processCadenceFiles(
 
 	// TODO: pass page number here + support pagination
 	results, _, err := gk.client.Search.Code(ctx, query, nil)
-	if err != nil {
-		return
-	}
-
-	var networkHost string
-	if strings.EqualFold("testnet", network) {
-		networkHost = http.TestnetHost
-	} else if strings.EqualFold("mainnet", network) {
-		networkHost = http.MainnetHost
-	}
-	flowClient, err := http.NewClient(networkHost)
 	if err != nil {
 		return
 	}
@@ -367,15 +373,46 @@ func ParseScriptArguments(
 }
 
 func (gk *GitKit) parseFileForContracts(
+	ctx context.Context,
 	network string,
+	flowClient *http.Client,
 	file File,
 ) (
 	contractsMap map[string]string,
 	err error,
 ) {
+	contractsMap = make(map[string]string)
+
 	r, _ := regexp.Compile(`0x[0-9a-fA-F]{16}`)
 	docAddresses := r.FindAllString(file.Contents, -1)
 
-	viableAddresses
+	viableAddresses := map[string]bool{}
+
+	for _, docAddress := range docAddresses {
+		address := flow.HexToAddress(docAddress)
+
+		isValid := false
+		if strings.EqualFold(network, "testnet") {
+			isValid = address.IsValid(flow.Testnet)
+		} else if strings.EqualFold(network, "mainnet") {
+			isValid = address.IsValid(flow.Mainnet)
+		}
+
+		if isValid {
+			viableAddresses[docAddress] = true
+		}
+	}
+
+	for address := range viableAddresses {
+		account, errFlow := flowClient.GetAccount(ctx, flow.HexToAddress(address))
+		if errFlow != nil {
+			fmt.Println(errFlow)
+		}
+
+		for contract := range account.Contracts {
+			contractsMap[contract] = strings.TrimPrefix(address, "0x")
+		}
+	}
+
 	return
 }
