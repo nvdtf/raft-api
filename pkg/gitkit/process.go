@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/google/go-github/v45/github"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/access/http"
@@ -141,8 +142,16 @@ func (gk *GitKit) processCadenceFiles(
 	scripts = []ExecutableFile{}
 	transactions = []ExecutableFile{}
 
-	// TODO: pass page number here + support pagination
-	results, _, err := gk.client.Search.Code(ctx, query, nil)
+	// TODO: support result count > 100
+	results, _, err := gk.client.Search.Code(
+		ctx,
+		query,
+		&github.SearchOptions{
+			ListOptions: github.ListOptions{
+				PerPage: 100,
+			},
+		},
+	)
 	if err != nil {
 		return
 	}
