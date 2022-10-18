@@ -9,3 +9,6 @@ curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"portto", "repo":"
 
 // README parsing
 curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"crash13override", "repo":"flovatar", "network": "mainnet"}'
+
+// known contracts
+curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"emerald-dao", "repo":"float", "network": "mainnet"}'

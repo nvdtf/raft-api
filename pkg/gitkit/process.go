@@ -88,41 +88,6 @@ func (gk *GitKit) Process(
 	}, nil
 }
 
-func (gk *GitKit) getContractsMap(
-	ctx context.Context,
-	owner string,
-	repo string,
-	network string,
-	flowClient *http.Client,
-	documents []File,
-) (
-	contractsMap map[string]string,
-) {
-	contractsMap, err := gk.parseFlowJsonFile(owner, repo, network)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	var docContractMap map[string]string
-	for _, f := range documents {
-		if strings.EqualFold(f.Path, "README.md") {
-			docContractMap, err = gk.parseFileForContracts(ctx, network, flowClient, f)
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-	}
-
-	for k, v := range docContractMap {
-		_, exists := contractsMap[k]
-		if !exists {
-			contractsMap[k] = v
-		}
-	}
-
-	return
-}
-
 func (gk *GitKit) processCadenceFiles(
 	ctx context.Context,
 	owner string,
@@ -228,6 +193,11 @@ func (gk *GitKit) processCadenceFiles(
 					File:      file,
 					Arguments: args,
 				})
+			}
+
+			// log errors
+			for _, e := range file.Errors {
+				fmt.Printf("error processing file %s: %s\n", file.Path, e)
 			}
 		}
 	}
@@ -375,51 +345,6 @@ func ParseScriptArguments(
 					ArgType: param.TypeAnnotation.String(),
 				})
 			}
-		}
-	}
-
-	return
-}
-
-func (gk *GitKit) parseFileForContracts(
-	ctx context.Context,
-	network string,
-	flowClient *http.Client,
-	file File,
-) (
-	contractsMap map[string]string,
-	err error,
-) {
-	contractsMap = make(map[string]string)
-
-	r, _ := regexp.Compile(`0x[0-9a-fA-F]{16}`)
-	docAddresses := r.FindAllString(file.Contents, -1)
-
-	viableAddresses := map[string]bool{}
-
-	for _, docAddress := range docAddresses {
-		address := flow.HexToAddress(docAddress)
-
-		isValid := false
-		if strings.EqualFold(network, "testnet") {
-			isValid = address.IsValid(flow.Testnet)
-		} else if strings.EqualFold(network, "mainnet") {
-			isValid = address.IsValid(flow.Mainnet)
-		}
-
-		if isValid {
-			viableAddresses[docAddress] = true
-		}
-	}
-
-	for address := range viableAddresses {
-		account, errFlow := flowClient.GetAccount(ctx, flow.HexToAddress(address))
-		if errFlow != nil {
-			fmt.Println(errFlow)
-		}
-
-		for contract := range account.Contracts {
-			contractsMap[contract] = strings.TrimPrefix(address, "0x")
 		}
 	}
 
