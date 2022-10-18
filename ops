@@ -12,3 +12,6 @@ curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"crash13override",
 
 // known contracts
 curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"emerald-dao", "repo":"float", "network": "mainnet"}'
+
+// non-standard replacement format 0xNAME
+curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"dapperlabs", "repo":"nba-smart-contracts", "network": "mainnet"}'

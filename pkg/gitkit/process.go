@@ -267,7 +267,8 @@ func ReplaceImports(
 	[]byte,
 	[]string,
 ) {
-	r, _ := regexp.Compile(`import (?P<Contract>\w*) from "(.*).cdc"`)
+	// r, _ := regexp.Compile(`import (?P<Contract>\w*) from "(.*).cdc"`)
+	r, _ := regexp.Compile(`import (?P<Contract>\w*) from .*`)
 	matches := r.FindAllStringSubmatch(string(code), -1)
 
 	result := string(code)
