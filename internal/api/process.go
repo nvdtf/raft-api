@@ -27,6 +27,8 @@ func (api *Api) ProcessRepoHandler(w http.ResponseWriter, r *http.Request) {
 	)
 	log.Info("Processing repo")
 
+	RegisterRepoProcessRequestMetrics(params.Owner+"/"+params.Repo, params.Network)
+
 	result, err := api.kit.Process(params.Owner, params.Repo, params.Network)
 	if err != nil {
 		log.With("error", err).Error("Error processing repo")
