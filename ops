@@ -15,3 +15,6 @@ curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"emerald-dao", "re
 
 // non-standard replacement format 0xNAME
 curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"dapperlabs", "repo":"nba-smart-contracts", "network": "mainnet"}'
+
+// test prod
+curl -X POST "http://54.208.204.182:8080/processRepo" -d '{"owner":"dapperlabs", "repo":"nba-smart-contracts", "network": "mainnet"}'
