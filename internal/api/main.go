@@ -1,16 +1,35 @@
 package api
 
-import "github.com/nvdtf/raft-api/pkg/gitkit"
+import (
+	"github.com/nvdtf/raft-api/pkg/gitkit"
+	"go.uber.org/zap"
+)
 
 type Api struct {
-	kit gitkit.GitKitInterface
+	kit    gitkit.GitKitInterface
+	logger *zap.SugaredLogger
 }
 
-func NewApi(githubToken string) Api {
-	gk := gitkit.NewGitKit(githubToken)
-	return Api{
-		kit: gk,
+func NewApi(
+	githubToken string,
+) (
+	*Api,
+	error,
+) {
+	gk, err := gitkit.NewGitKit(githubToken)
+	if err != nil {
+		return nil, err
 	}
+
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Api{
+		kit:    gk,
+		logger: logger.Sugar(),
+	}, nil
 }
 
 type JSONError struct {

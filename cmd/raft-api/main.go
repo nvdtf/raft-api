@@ -11,7 +11,10 @@ import (
 )
 
 func main() {
-	api := api.NewApi(os.Getenv("GITHUB_TOKEN"))
+	api, err := api.NewApi(os.Getenv("GITHUB_TOKEN"))
+	if err != nil {
+		panic(err)
+	}
 
 	router := mux.NewRouter().StrictSlash(true)
 

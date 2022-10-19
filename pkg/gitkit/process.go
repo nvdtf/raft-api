@@ -55,8 +55,6 @@ func (gk *GitKit) Process(
 ) {
 	ctx := context.Background()
 
-	fmt.Printf("Processing %s/%s (%s)\n", owner, repo, network)
-
 	var networkHost string
 	if strings.EqualFold("testnet", network) {
 		networkHost = http.TestnetHost
@@ -197,7 +195,11 @@ func (gk *GitKit) processCadenceFiles(
 
 			// log errors
 			for _, e := range file.Errors {
-				fmt.Printf("error processing file %s: %s\n", file.Path, e)
+				gk.logger.With(
+					"repo", owner+"/"+repo,
+					"file", file.Path,
+					"error", e,
+				).Info("Unable to process file")
 			}
 		}
 	}

@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 )
@@ -22,13 +21,22 @@ func (api *Api) ProcessRepoHandler(w http.ResponseWriter, r *http.Request) {
 	params := &ProcessRepoParams{}
 	json.Unmarshal(paramsBody, params)
 
+	log := api.logger.With(
+		"repo", params.Owner+"/"+params.Repo,
+		"network", params.Network,
+	)
+	log.Info("Processing repo")
+
 	result, err := api.kit.Process(params.Owner, params.Repo, params.Network)
 	if err != nil {
-		fmt.Printf("Error in ProcessRepo(%s, %s, %s) -> %s\n", params.Owner, params.Repo, params.Network, err)
+		log.With("error", err).Error("Error processing repo")
+
 		w.WriteHeader(500)
 		json.NewEncoder(w).Encode(&JSONError{Error: err.Error()})
 		return
 	}
+
+	log.Info("Repo processed")
 
 	json.NewEncoder(w).Encode(result)
 }

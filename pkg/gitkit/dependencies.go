@@ -2,7 +2,6 @@ package gitkit
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -44,10 +43,19 @@ func (gk *GitKit) getContractsMap(
 ) (
 	contractsMap map[string]string,
 ) {
+	log := gk.logger.With(
+		"repo", owner+"/"+repo,
+		"network", network,
+	)
+
 	// init with contract addresses from flow.json
 	contractsMap, err := gk.parseFlowJsonFile(owner, repo, network)
 	if err != nil {
-		fmt.Println(err)
+		if strings.Contains(err.Error(), "404 Not Found") {
+			log.Info("No flow.json file")
+		} else {
+			log.With("error", err).Error("Error parsing flow.json file")
+		}
 	}
 
 	// add addresses from md files
@@ -56,7 +64,7 @@ func (gk *GitKit) getContractsMap(
 		if strings.EqualFold(f.Path, "README.md") {
 			docContractMap, err = gk.parseFileForContracts(ctx, network, flowClient, f)
 			if err != nil {
-				fmt.Println(err)
+				log.With("error", err).Error("Error extracting contracts from document")
 			}
 		}
 	}
@@ -102,7 +110,11 @@ func (gk *GitKit) parseFileForContracts(
 	for address := range viableAddresses {
 		account, errFlow := flowClient.GetAccount(ctx, flow.HexToAddress(address))
 		if errFlow != nil {
-			fmt.Println(errFlow)
+			gk.logger.With(
+				"address", address,
+				"file", file.Path,
+				"error", errFlow,
+			).Error("Error calling GetAccount")
 		}
 
 		for contract := range account.Contracts {
