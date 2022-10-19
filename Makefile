@@ -6,4 +6,8 @@ dev:
 
 .SILENT: run
 run:
-	docker-compose up --build
+	docker-compose up --build -d
+
+.SILENT: stop
+stop:
+	docker-compose down
