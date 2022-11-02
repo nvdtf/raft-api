@@ -14,19 +14,21 @@ func getKnownContractAddresses(
 ) map[string]string {
 	if strings.EqualFold(network, "mainnet") {
 		return map[string]string{
-			"FungibleToken":    "0xf233dcee88fe0abe",
-			"NonFungibleToken": "0x1d7e57aa55817448",
-			"MetadataViews":    "0x1d7e57aa55817448",
-			"FlowToken":        "0x1654653399040a61",
-			"FlowStorageFees":  "0xe467b9dd11fa00df",
+			"FungibleToken":     "f233dcee88fe0abe",
+			"NonFungibleToken":  "1d7e57aa55817448",
+			"MetadataViews":     "1d7e57aa55817448",
+			"FlowToken":         "1654653399040a61",
+			"FlowStorageFees":   "e467b9dd11fa00df",
+			"DapperUtilityCoin": "ead892083b3e2c6c",
 		}
 	} else if strings.EqualFold(network, "testnet") {
 		return map[string]string{
-			"FungibleToken":    "0x9a0766d93b6608b7",
-			"NonFungibleToken": "0x631e88ae7f1d7c20",
-			"MetadataViews":    "0x631e88ae7f1d7c20",
-			"FlowToken":        "0x7e60df042a9c0868",
-			"FlowStorageFees":  "0x8c5303eaa26202d6",
+			"FungibleToken":     "9a0766d93b6608b7",
+			"NonFungibleToken":  "631e88ae7f1d7c20",
+			"MetadataViews":     "631e88ae7f1d7c20",
+			"FlowToken":         "7e60df042a9c0868",
+			"FlowStorageFees":   "8c5303eaa26202d6",
+			"DapperUtilityCoin": "82e283f88a62e65",
 		}
 	}
 
@@ -49,12 +51,12 @@ func (gk *GitKit) getContractsMap(
 	)
 
 	// init with contract addresses from flow.json
-	contractsMap, err := gk.parseFlowJsonFile(owner, repo, network)
+	contractsMap, err := gk.parseFlowJsonFile(ctx, owner, repo, network)
 	if err != nil {
 		if strings.Contains(err.Error(), "404 Not Found") {
 			log.Info("No flow.json file")
 		} else {
-			log.With("error", err).Error("Error parsing flow.json file")
+			log.With("error", err).Error("error parsing flow.json file")
 		}
 	}
 
@@ -64,7 +66,7 @@ func (gk *GitKit) getContractsMap(
 		if strings.EqualFold(f.Path, "README.md") {
 			docContractMap, err = gk.parseFileForContracts(ctx, network, flowClient, f)
 			if err != nil {
-				log.With("error", err).Error("Error extracting contracts from document")
+				log.With("error", err).Error("error extracting contracts from document")
 			}
 		}
 	}
@@ -114,7 +116,7 @@ func (gk *GitKit) parseFileForContracts(
 				"address", address,
 				"file", file.Path,
 				"error", errFlow,
-			).Error("Error calling GetAccount")
+			).Error("error calling GetAccount")
 		}
 
 		for contract := range account.Contracts {

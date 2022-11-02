@@ -10,6 +10,10 @@ services:
     ports:
       - '8080:8080'
       - '2112:2112'
+    depends_on:
+      - prometheus
+      - grafana
+      - redis
 
   prometheus:
     image: prom/prometheus:v2.30.0
@@ -31,6 +35,14 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
 
+  redis:
+    image: redis:7.0.5-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+
 volumes:
   prometheus-data:
   grafana-data:
+  redis-data:

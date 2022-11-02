@@ -1,6 +1,7 @@
 package gitkit
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 )
@@ -57,6 +58,7 @@ func parseJson(flowJson []byte) (*flowJsonConfig, error) {
 }
 
 func (gk *GitKit) parseFlowJsonFile(
+	ctx context.Context,
 	owner string,
 	repo string,
 	network string,
@@ -66,7 +68,7 @@ func (gk *GitKit) parseFlowJsonFile(
 ) {
 	contractMap = make(map[string]string)
 
-	flowJson, err := gk.Read(owner, repo, FLOW_JSON_PATH)
+	flowJson, err := gk.Read(ctx, owner, repo, FLOW_JSON_PATH)
 	if err != nil {
 		return
 	}

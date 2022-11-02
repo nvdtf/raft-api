@@ -46,6 +46,7 @@ type Argument struct {
 }
 
 func (gk *GitKit) Process(
+	ctx context.Context,
 	owner string,
 	repo string,
 	network string,
@@ -53,8 +54,6 @@ func (gk *GitKit) Process(
 	*ProcessResult,
 	error,
 ) {
-	ctx := context.Background()
-
 	var networkHost string
 	if strings.EqualFold("testnet", network) {
 		networkHost = http.TestnetHost
@@ -120,7 +119,7 @@ func (gk *GitKit) processCadenceFiles(
 	}
 
 	for _, res := range results.CodeResults {
-		contents, errRead := gk.Read(owner, repo, *res.Path)
+		contents, errRead := gk.Read(ctx, owner, repo, *res.Path)
 		if errRead != nil {
 			err = errRead
 			return
@@ -170,7 +169,7 @@ func (gk *GitKit) processCadenceFiles(
 			if IsTransaction(string(contents)) {
 				file.Type = "Transaction"
 
-				args, errParse = ParseTransactionArguments(string(contents))
+				args, errParse = ParseTransactionArguments(string(processResult))
 				if errParse != nil {
 					file.Errors = append(file.Errors, errParse.Error())
 				}
@@ -182,7 +181,7 @@ func (gk *GitKit) processCadenceFiles(
 			} else {
 				file.Type = "Script"
 
-				args, errParse = ParseScriptArguments(string(contents))
+				args, errParse = ParseScriptArguments(string(processResult))
 				if errParse != nil {
 					file.Errors = append(file.Errors, errParse.Error())
 				}
@@ -223,7 +222,7 @@ func (gk *GitKit) processDocumentFiles(
 	}
 
 	for _, res := range results.CodeResults {
-		contents, errRead := gk.Read(owner, repo, *res.Path)
+		contents, errRead := gk.Read(ctx, owner, repo, *res.Path)
 		if errRead != nil {
 			err = errRead
 			return

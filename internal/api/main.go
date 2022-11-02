@@ -1,6 +1,8 @@
 package api
 
 import (
+	"github.com/go-redis/cache/v8"
+	"github.com/go-redis/redis/v8"
 	"github.com/nvdtf/raft-api/pkg/gitkit"
 	"go.uber.org/zap"
 )
@@ -8,6 +10,7 @@ import (
 type Api struct {
 	kit    gitkit.GitKitInterface
 	logger *zap.SugaredLogger
+	cache  *cache.Cache
 }
 
 func NewApi(
@@ -26,9 +29,19 @@ func NewApi(
 		return nil, err
 	}
 
+	rdb := redis.NewClient(&redis.Options{
+		Addr: "redis:6379",
+	})
+
+	mycache := cache.New(&cache.Options{
+		Redis: rdb,
+		// LocalCache: cache.NewTinyLFU(1000, time.Hour),
+	})
+
 	return &Api{
 		kit:    gk,
 		logger: logger.Sugar(),
+		cache:  mycache,
 	}, nil
 }
 

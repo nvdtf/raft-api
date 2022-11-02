@@ -3,6 +3,7 @@ package gitkit
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 
 	"github.com/google/go-github/v45/github"
 	"go.uber.org/zap"
@@ -10,8 +11,9 @@ import (
 )
 
 type GitKitInterface interface {
-	Process(owner string, repo string, network string) (*ProcessResult, error)
-	Read(owner string, repo string, path string) ([]byte, error)
+	Process(ctx context.Context, owner string, repo string, network string) (*ProcessResult, error)
+	Read(ctx context.Context, owner string, repo string, path string) ([]byte, error)
+	GetLatestCommitHash(ctx context.Context, owner string, repo string) (string, error)
 }
 
 type GitKit struct {
@@ -45,9 +47,7 @@ func NewGitKit(
 	}, nil
 }
 
-func (gk *GitKit) Read(owner string, repo string, path string) ([]byte, error) {
-	ctx := context.Background()
-
+func (gk *GitKit) Read(ctx context.Context, owner string, repo string, path string) ([]byte, error) {
 	result, _, _, err := gk.client.Repositories.GetContents(ctx, owner, repo, path, nil)
 	if err != nil {
 		return nil, err
@@ -59,4 +59,17 @@ func (gk *GitKit) Read(owner string, repo string, path string) ([]byte, error) {
 	}
 
 	return contents, nil
+}
+
+func (gk *GitKit) GetLatestCommitHash(ctx context.Context, owner string, repo string) (string, error) {
+	res, _, err := gk.client.Repositories.ListCommits(ctx, owner, repo, &github.CommitsListOptions{ListOptions: github.ListOptions{PerPage: 1}})
+	if err != nil {
+		return "", err
+	}
+
+	if len(res) == 0 {
+		return "", errors.New("no commits available")
+	}
+
+	return *res[0].SHA, nil
 }
