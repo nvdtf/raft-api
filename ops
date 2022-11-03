@@ -18,3 +18,5 @@ curl -X POST "http://localhost:8080/processRepo" -d '{"owner":"dapperlabs", "rep
 
 // test prod
 curl -X POST "http://54.208.204.182:8080/processRepo" -d '{"owner":"dapperlabs", "repo":"nba-smart-contracts", "network": "mainnet"}'
+
+curl -X POST "http://54.208.204.182:8080/processRepo" -d '{"owner":"nvdtf", "repo":"welcome-to-raft", "network": "mainnet"}'

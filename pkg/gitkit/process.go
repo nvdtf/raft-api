@@ -2,6 +2,7 @@ package gitkit
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"regexp"
 	"strings"
@@ -269,7 +270,7 @@ func ReplaceImports(
 	[]string,
 ) {
 	// r, _ := regexp.Compile(`import (?P<Contract>\w*) from "(.*).cdc"`)
-	r, _ := regexp.Compile(`import (?P<Contract>\w*) from .*`)
+	r, _ := regexp.Compile(`import (?P<Contract>\w*) from (?P<From>.*)`)
 	matches := r.FindAllStringSubmatch(string(code), -1)
 
 	result := string(code)
@@ -277,22 +278,23 @@ func ReplaceImports(
 	errors := []string{}
 
 	for i := range matches {
-		contractName := matches[i][1]
-		address, exists := contractRef[contractName]
+		if !IsAddress(matches[i][2]) {
+			contractName := matches[i][1]
+			address, exists := contractRef[contractName]
 
-		if exists {
-			result = strings.ReplaceAll(
-				result,
-				matches[i][0],
-				fmt.Sprintf("import %s from 0x%s",
-					contractName,
-					address,
-				),
-			)
-		} else {
-			errors = append(errors, fmt.Sprintf("Cannot resolve import for %s", contractName))
+			if exists {
+				result = strings.ReplaceAll(
+					result,
+					matches[i][0],
+					fmt.Sprintf("import %s from 0x%s",
+						contractName,
+						address,
+					),
+				)
+			} else {
+				errors = append(errors, fmt.Sprintf("Cannot resolve import for %s", contractName))
+			}
 		}
-
 	}
 
 	return []byte(result), errors
@@ -351,4 +353,13 @@ func ParseScriptArguments(
 	}
 
 	return
+}
+
+func IsAddress(input string) bool {
+	trimmed := strings.TrimPrefix(input, "0x")
+	if len(trimmed)%2 == 1 {
+		trimmed = "0" + trimmed
+	}
+	_, err := hex.DecodeString(trimmed)
+	return err == nil
 }
