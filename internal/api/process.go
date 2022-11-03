@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/go-redis/cache/v8"
 	"github.com/nvdtf/raft-api/pkg/gitkit"
@@ -41,12 +42,12 @@ func (api *Api) ProcessRepoHandler(w http.ResponseWriter, r *http.Request) {
 		serverError(w, api.logger, err, "error accessing repository")
 		return
 	}
-	log.Info(latestCommit)
 
 	var result *gitkit.ProcessResult
 	err = api.cache.Once(&cache.Item{
 		Key:   params.Owner + "/" + params.Repo + "-" + params.Network + "-" + latestCommit,
 		Value: &result,
+		TTL:   7 * 24 * time.Hour, // 1 week cache expiration
 		Do: func(*cache.Item) (interface{}, error) {
 			log.Info("Processing repo")
 			RegisterRepoProcessCacheMissMetrics(params.Owner+"/"+params.Repo, params.Network)
