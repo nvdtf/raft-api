@@ -242,7 +242,7 @@ func (gk *GitKit) processDocumentFiles(
 }
 
 func IsContract(code string) (bool, string) {
-	r, _ := regexp.Compile(`pub contract (.*){`)
+	r, _ := regexp.Compile(`(pub|access\(all\)) contract (.*){`)
 	contractName := r.FindStringSubmatch(code)
 	if len(contractName) > 0 {
 		return true, strings.Trim(contractName[1], " ")
@@ -257,7 +257,7 @@ func IsTransaction(code string) bool {
 }
 
 func IsScript(code string) bool {
-	r, _ := regexp.Compile(`pub fun main(.*){`)
+	r, _ := regexp.Compile(`(pub|access\(all\)) fun main(.*){`)
 	matches := r.FindAllStringSubmatch(code, -1)
 	return len(matches) > 0
 }
