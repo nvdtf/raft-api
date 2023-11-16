@@ -297,6 +297,28 @@ func ReplaceImports(
 		}
 	}
 
+	// new import syntax
+	r, _ = regexp.Compile(`import "(?P<Contract>\w*)"`)
+	matches = r.FindAllStringSubmatch(string(code), -1)
+
+	for i := range matches {
+		contractName := matches[i][1]
+		address, exists := contractRef[contractName]
+
+		if exists {
+			result = strings.ReplaceAll(
+				result,
+				matches[i][0],
+				fmt.Sprintf("import %s from 0x%s",
+					contractName,
+					address,
+				),
+			)
+		} else {
+			errors = append(errors, fmt.Sprintf("Cannot resolve import for %s", contractName))
+		}
+	}
+
 	return []byte(result), errors
 
 }
