@@ -25,6 +25,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.3 // indirect
 	github.com/go-test/deep v1.0.5 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/google/go-github/v56 v56.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.14 // indirect

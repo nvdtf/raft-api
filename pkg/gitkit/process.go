@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/google/go-github/v45/github"
+	"github.com/google/go-github/v56/github"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/access/http"
@@ -99,7 +99,7 @@ func (gk *GitKit) processCadenceFiles(
 	transactions []ExecutableFile,
 	err error,
 ) {
-	query := fmt.Sprintf("filename:.cdc+repo:%s/%s", owner, repo)
+	query := fmt.Sprintf("extension:cdc repo:%s/%s", owner, repo)
 
 	contracts = []DeployedFile{}
 	scripts = []ExecutableFile{}
@@ -215,7 +215,7 @@ func (gk *GitKit) processDocumentFiles(
 	documents []File,
 	err error,
 ) {
-	query := fmt.Sprintf("filename:.md+repo:%s/%s", owner, repo)
+	query := fmt.Sprintf("extension:md repo:%s/%s", owner, repo)
 
 	results, _, err := gk.client.Search.Code(ctx, query, nil)
 	if err != nil {

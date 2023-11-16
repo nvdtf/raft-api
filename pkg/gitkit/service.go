@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 
-	"github.com/google/go-github/v45/github"
+	"github.com/google/go-github/v56/github"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 )
